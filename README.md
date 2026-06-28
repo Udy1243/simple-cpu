@@ -82,28 +82,47 @@ I-type: [15:13] opcode | [12:10] Rd/Rs | [9:4] imm | [3:1] Rs2 | [0] unused
 
 ### Testbench
 
-`tb/cpu_tb.sv` loads hex-encoded programs into instruction and data memory using `$readmemh`, drives clock and reset, and prints the CPU state on every cycle.
+`tb/cpu_tb.sv` loads hex-encoded programs into instruction and data memory using
+`$readmemh`, drives clock and reset, and prints the CPU state on every cycle.
 
 ```bash
-iverilog -g2012 -o sim/cpu_tb \
-  tb/cpu_tb.sv \
-  rtl/cpu.sv \
-  rtl/alu.sv \
-  rtl/register_file.sv \
-  rtl/memory.sv
-
-vvp sim/cpu_tb
+make sim
 ```
 
-### Test Programs
+### Simulation Output
 
-| Test | Instructions exercised | Expected outcome |
-|------|------------------------|-----------------|
-| Arithmetic + memory | `LOAD`, `ADD`, `STORE` | `mem[2] = mem[0] + mem[1]` |
-| Branch taken | `BEQ` (equal operands) | PC jumps by immediate offset |
-| Branch not taken | `BEQ` (unequal operands) | PC increments normally |
+The following program tests LOAD, ADD, and STORE in sequence:
 
-Programs are written as raw hex files (`sim/program.hex`, `sim/data.hex`), one word per line.
+```
+; Assembly program
+LOAD r1, mem[0]     ; r1 = 5
+LOAD r2, mem[1]     ; r2 = 3
+ADD  r3, r1, r2     ; r3 = 8
+STORE r3, mem[2]    ; mem[2] = 8
+```
+
+Encoded as hex in `sim/program.hex`:
+```
+8400
+8810
+0CA0
+AC20
+```
+
+Simulation output:
+```
+PC: 0, Instruction: 8400, ALU result: 0, reg_write_en: 1, rd: 1, reg_write_data: 5
+PC: 1, Instruction: 8810, ALU result: 0, reg_write_en: 1, rd: 2, reg_write_data: 3
+PC: 2, Instruction: 0ca0, ALU result: 8, reg_write_en: 1, rd: 3, reg_write_data: 8
+PC: 3, Instruction: ac20, ALU result: 0, reg_write_en: 0, rd: 3, reg_write_data: 0
+--- Program complete ---
+Final state: mem[2] = 8 (expected 8)
+```
+
+- PC=0: LOAD r1 ← mem[0] = 5 ✓
+- PC=1: LOAD r2 ← mem[1] = 3 ✓
+- PC=2: ADD  r3 = r1 + r2 = 8 ✓
+- PC=3: STORE mem[2] = r3 = 8 ✓
 
 ---
 
@@ -112,7 +131,7 @@ Programs are written as raw hex files (`sim/program.hex`, `sim/data.hex`), one w
 ### Prerequisites
 
 ```bash
-sudo apt install iverilog
+sudo apt install iverilog make
 ```
 
 ### Simulate
@@ -120,8 +139,13 @@ sudo apt install iverilog
 ```bash
 git clone https://github.com/Udy1243/simple-cpu
 cd simple-cpu
-iverilog -g2012 -o sim/cpu_tb tb/cpu_tb.sv rtl/*.sv
-vvp sim/cpu_tb
+make sim
+```
+
+### Synthesize
+
+```bash
+make synth
 ```
 
 ---
@@ -129,10 +153,6 @@ vvp sim/cpu_tb
 ## Synthesis
 
 Synthesized with Yosys 0.52 targeting generic gate primitives (`synth -top cpu`).
-
-```bash
-yosys syn/cpu.ys
-```
 
 | Metric | Value |
 |--------|-------|
@@ -144,6 +164,11 @@ yosys syn/cpu.ys
 
 Netlist written to `syn/cpu_netlist.v`.
 
+> Note: The high flip-flop count (582) is expected — data memory is implemented
+> as registers (64 locations × 8 bits = 512 FFs), plus 64 FFs for the 8-register
+> file and 6 FFs for the PC. In a real chip, data memory would be SRAM macros, not
+> flip-flops, which would reduce the cell count dramatically.
+
 ---
 
 ## Tools & Technologies
@@ -151,7 +176,7 @@ Netlist written to `syn/cpu_netlist.v`.
 | Category | Tool |
 |----------|------|
 | HDL | SystemVerilog |
-| Simulation | iverilog |
+| Simulation | iverilog 12.0 |
 | Synthesis | Yosys 0.52 |
 | Memory init | `$readmemh` (hex files) |
 | Version control | Git |
@@ -160,11 +185,11 @@ Netlist written to `syn/cpu_netlist.v`.
 
 ## Project Status
 
-- [x] ISA definition
+- [x] ISA definition (7 instructions, 16-bit encoding)
 - [x] ALU (ADD, SUB, AND, OR + zero flag)
-- [x] Register file (8 × 8-bit, async active-low reset)
+- [x] Register file (8 × 8-bit, combinational reads, synchronous write)
 - [x] Memory (instruction ROM + data RAM, single module)
 - [x] Single-cycle top-level datapath (`cpu.sv`)
-- [x] Testbench (arithmetic, memory, branch tests)
+- [x] Testbench (LOAD, ADD, STORE verified with hex programs)
 - [x] Synthesis (Yosys — 1,758 cells)
 - [ ] Pipeline extension (future)
