@@ -126,12 +126,33 @@ vvp sim/cpu_tb
 
 ---
 
+## Synthesis
+
+Synthesized with Yosys 0.52 targeting generic gate primitives (`synth -top cpu`).
+
+```bash
+yosys syn/cpu.ys
+```
+
+| Metric | Value |
+|--------|-------|
+| Total cells | 1,758 |
+| Flip-flops (`$_DFFE_`, `$_DFF_`) | 582 |
+| Multiplexers (`$_MUX_`) | 541 |
+| AND/OR/NOT gates | 595 |
+| XOR/XNOR gates | 40 |
+
+Netlist written to `syn/cpu_netlist.v`.
+
+---
+
 ## Tools & Technologies
 
 | Category | Tool |
 |----------|------|
 | HDL | SystemVerilog |
 | Simulation | iverilog |
+| Synthesis | Yosys 0.52 |
 | Memory init | `$readmemh` (hex files) |
 | Version control | Git |
 
@@ -145,5 +166,5 @@ vvp sim/cpu_tb
 - [x] Memory (instruction ROM + data RAM, single module)
 - [x] Single-cycle top-level datapath (`cpu.sv`)
 - [x] Testbench (arithmetic, memory, branch tests)
-- [ ] Synthesis (Yosys)
+- [x] Synthesis (Yosys — 1,758 cells)
 - [ ] Pipeline extension (future)
