@@ -1,6 +1,8 @@
 module cpu (
     input logic clk, 
-    input logic rst_n
+    input logic rst_n,
+    output logic [5:0] pc_out,
+    output logic [7:0] alu_out
 );
 
 logic [5:0] pc; 
@@ -68,5 +70,7 @@ assign reg_write_en = (op == 3'b000 || op == 3'b001 || op == 3'b010 || op == 3'b
 assign mem_write_en = (op == 3'b101);
 assign reg_write_data = (op == 3'b100) ? data_read : alu_result;
 assign beq_taken = (op == 3'b110) && operand_a == operand_b;
+assign pc_out = pc;
+assign alu_out = alu_result;
 
 endmodule
